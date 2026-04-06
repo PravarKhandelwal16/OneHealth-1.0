@@ -10,6 +10,33 @@ class RecordsTab extends StatefulWidget {
 }
 
 class _RecordsTabState extends State<RecordsTab> {
+  class _RecordsTabState extends State<RecordsTab> {
+  final ApiService _apiService = ApiService();
+  List<dynamic> _records = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchRecords(); // Start fetching when the tab is opened
+  }
+
+  Future<void> _fetchRecords() async {
+    try {
+      // Replace "test_user_123" with your dynamic user ID logic
+      final data = await _apiService.getRecords("test_user_123");
+      setState(() {
+        _records = data;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      // Optional: Show error message to user
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error fetching records: $e")),
+      );
+    }
+  }
   bool _isAnalyzing = false;
   static const Color slate800 = Color(0xFF1E293B);
   static const Color indigo600 = Color(0xFF4F46E5);
@@ -32,41 +59,25 @@ class _RecordsTabState extends State<RecordsTab> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      body: Stack(
-        children: [
-          SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 60),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text("Clinical Vault", style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: slate800)),
-                const Text("Unified Medical Intelligence Hub", style: TextStyle(color: Colors.grey, fontSize: 13)),
-                const SizedBox(height: 25),
-                _buildVaultSecurityIndicator(),
-                const SizedBox(height: 30),
-                _buildSectionHeader("Ingest Reports", LucideIcons.filePlus),
-                GestureDetector(
-                  onTap: _handleUpload,
-                  child: _buildUploadSection(),
-                ),
-                const SizedBox(height: 30),
-                _buildSectionHeader("Data Categories", LucideIcons.layoutGrid),
-                _buildFolderGrid(),
-                const SizedBox(height: 30),
-                _buildSectionHeader("Recent Documents", LucideIcons.history),
-                _historyItem("Blood Panel - SRM Hospital", "Today"),
-                _historyItem("Prescription - Apollo", "2 April"),
-              ],
-            ),
-          ),
-          if (_isAnalyzing) _buildLoadingOverlay(),
-        ],
-      ),
-    );
-  }
+Widget build(BuildContext context) {
+  return Scaffold(
+    body: _isLoading
+        ? const Center(child: CircularProgressIndicator()) // Loading state
+        : _records.isEmpty
+            ? const Center(child: Text("No medical records found.")) // Empty state
+            : ListView.builder(
+                itemCount: _records.length,
+                itemBuilder: (context, index) {
+                  final record = _records[index];
+                  return RecordTile(
+                    title: record['filename'] ?? 'Medical Report',
+                    date: record['upload_date'] ?? 'No Date',
+                    type: record['record_type'] ?? 'General',
+                  );
+                },
+              ),
+  );
+}
 
   Widget _buildVaultSecurityIndicator() {
     return Container(

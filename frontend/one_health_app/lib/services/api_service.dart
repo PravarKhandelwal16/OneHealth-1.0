@@ -1,39 +1,44 @@
 import 'package:dio/dio.dart';
+import 'dart:io';
 
 class ApiService {
-  // Use 10.0.2.2 if testing on Android Emulator, or your local IP for physical devices
-  final Dio _dio = Dio(BaseOptions(baseUrl: 'http://127.0.0.1:8000'));
+  // Use 10.0.2.2 for Android Emulator, localhost for iOS/Web
+  static const String baseUrl = "http://10.0.2.2:8000"; 
+  final Dio _dio = Dio();
 
-  // Test Database Connection
-  Future<Map<String, dynamic>> testConnection() async {
+  // 1. Upload Medical Record (Image/PDF)
+  Future<Map<String, dynamic>> uploadRecord(File file, String userId) async {
+    String fileName = file.path.split('/').last;
+    FormData formData = FormData.fromMap({
+      "file": await MultipartFile.fromFile(file.path, filename: fileName),
+      "user_id": userId,
+    });
+
     try {
-      final response = await _dio.get('/test-db');
+      var response = await _dio.post("$baseUrl/records/upload", data: formData);
       return response.data;
     } catch (e) {
-      return {'status': 'error', 'message': e.toString()};
+      throw Exception("Failed to upload record: $e");
     }
   }
 
-  // Upload a file (Mock OCR)
-  Future<Map<String, dynamic>> uploadRecord(String filePath) async {
+  // 2. Fetch All Records for a User
+  Future<List<dynamic>> getRecords(String userId) async {
     try {
-      FormData formData = FormData.fromMap({
-        "file": await MultipartFile.fromFile(filePath),
-      });
-      final response = await _dio.post('/records/upload', data: formData);
-      return response.data;
+      var response = await _dio.get("$baseUrl/records/$userId");
+      return response.data; // List of records
     } catch (e) {
-      return {'error': e.toString()};
+      throw Exception("Failed to fetch records: $e");
     }
   }
 
-  // Get records for a user
-  Future<List<dynamic>> fetchRecords(String userId) async {
+  // 3. Get AI Insights/Summary
+  Future<Map<String, dynamic>> getInsights(String userId) async {
     try {
-      final response = await _dio.get('/records/record/$userId');
-      return response.data['records'];
+      var response = await _dio.get("$baseUrl/insights/$userId");
+      return response.data;
     } catch (e) {
-      return [];
+      throw Exception("Failed to fetch insights: $e");
     }
   }
 }
